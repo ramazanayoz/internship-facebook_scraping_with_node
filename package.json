@@ -1,0 +1,22 @@
+{
+  "name": "Real_Project_facebook_event_scrapping",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "cheerio": "^1.0.0-rc.3",
+    "node-fetch": "^2.6.0",
+    "puppeteer": "^5.2.1",
+    "request": "^2.88.2",
+    "xpath": "0.0.27",
+    "xpath-html": "^1.0.2"
+  },
+  "devDependencies": {},
+  "description": ""
+}
