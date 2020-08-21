@@ -2,6 +2,10 @@
 
 const puppeteer = require('puppeteer');
 const fetch = require('node-fetch');
+const myDbService = require('./server/myDbService');
+
+const db = myDbService.getDbServiceInstance();
+
 
 ( async () => {
     
@@ -38,8 +42,13 @@ const fetch = require('node-fetch');
                 "--disable-setuid-sandbox",
                 '--disable-web-security',
                 
-                '--disable-gpu',
-                '--window-size=1920x1080'
+                "--disable-plugins", "--disable-sync", "--disable-gpu", "--disable-speech-api",
+                "--disable-remote-fonts", "--disable-shared-workers", "--disable-webgl", "--no-experiments",
+                "--no-first-run", "--no-default-browser-check", "--no-wifi", "--no-pings", "--no-service-autorun",
+                "--disable-databases", "--disable-default-apps", "--disable-demo-mode",
+                "--disable-permissions-api", "--disable-background-networking", "--disable-3d-apis",
+                "--disable-bundled-ppapi-flash"
+
               ],
             browserContext: "default",
         });
@@ -47,8 +56,24 @@ const fetch = require('node-fetch');
     
         const page = await browser.newPage();
     
-        page.setViewport({width: 1500, height: 764});
+        await page.setViewport({ width: 1920, height: 1080 });
     
+        //blocking images and CSS for speed up
+        
+        await page.setRequestInterception(true);
+
+        page.on('request', (req) => {
+            if(req.resourceType() == 'stylesheet' || req.resourceType() == 'font' || req.resourceType() == 'image' ){
+                req.abort();
+            }
+            else {
+                req.continue();
+            }
+        });
+        
+        //---------------
+
+
         await page.goto(url);
 
         return page;
@@ -207,6 +232,7 @@ const fetch = require('node-fetch');
     async function eventOperations(){
         console.log("event operations working");
 
+        //await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36');
 
         //console.log( await (await page._client.send('Network.getAllCookies')).cookies[0]  );
 
@@ -215,13 +241,34 @@ const fetch = require('node-fetch');
         
         //await getEvents(); //request yapılıyor ve belirtilen request sürekli dinleme yapılıyor. site hemen açılınca dinleme yapmak gerek yoksa geç kalabiliriz
 
-        await fetchEvents(106478736056198);
-        console.log("browserClosed");
-
-
-
+        //const resultObjectArr = await db.getAllPlaceId();
+        //console.log(resultObjectArr);
         
-       // await browser.close();
+        resultObjectArr = [
+             {
+              id: 109330919085413,
+              title: 'Uluborlu, Isparta, Turkey',
+            }
+        ]
+
+        //for (const placesObj of resultObjectArr) {
+       // await Promise.all(resultObjectArr.foreach(async (placesObj) => {
+        for (const placesObj of resultObjectArr) {
+            console.log(placesObj.id);
+            const eventsArr = await fetchEvents(placesObj.id);
+            console.log("arrlenth::",eventsArr.length); 
+            await Promise.all(eventsArr.map( async (event) => {
+                console.log("eevveentts::",event.eventId);
+                await db.insertNewEvent(event);
+            }));
+        };
+
+
+
+        //await page.waitForFunction( (count) => {  return 1 >  count._eventsCount }, {}, count._eventsCount ); 
+        console.log("bitttti"); 
+        console.log("browserClosed");
+         //await browser.close();
         //await page.waitFor(500);
 
         //await page.goto(eventurl);
@@ -239,6 +286,9 @@ const fetch = require('node-fetch');
         
         let pagCursor = "";
         let hasNextPage = true;
+
+
+        var eventsObjArr = [];
 
         while(hasNextPage){
 
@@ -260,7 +310,7 @@ const fetch = require('node-fetch');
 
             htmlText = htmlText.substring(9);
             json = JSON.parse(htmlText);
-        
+            
             //console.log(json.payload.results[0].events);
             try {
                 
@@ -269,7 +319,12 @@ const fetch = require('node-fetch');
                 console.log(eventsArr.length);
                 //for( i = 0; i < eventsArr.length; i++) { //kaynak prmise.all en hızlı sonra for of sonra for https://stackoverflow.com/questions/37576685/using-async-await-with-a-foreach-loop  
                 //burayı incele foreach içinde kullanmak istiyorsan daha hızllı olması için  https://stackoverflow.com/questions/48864589/how-to-scrape-multi-level-links-using-puppeteer-js
+                
+                // Visit each eventsList page one by one
+                //await Promise.all(eventsArr.map(async (event) => {
                 for (const event of eventsArr) {
+                    
+                
                 //console.log(event); 
                     //var event = eventsArr[i];
 
@@ -300,39 +355,83 @@ const fetch = require('node-fetch');
                         "isHappeningNowEvent": isHappeningNowEvent
                     }
 
-                    const fulleventObj = await getEventDetail(eventObj);
+                    //*önlemek için aynı şeyler yazılmasın diye
+                    //*kaynak https://stackoverflow.com/questions/46867517/how-to-read-file-with-async-await-properly/46867579
+                    const fs = require('fs');
+                    const util = require('util');
+                    // Convert fs.readFile into Promise version of same    
+                    const writeFile = util.promisify(fs.appendFile);
 
-                    console.log("fulleventObj", fulleventObj.eventId);
-                    fulleventObj;
-                    console.log("sıradaki");
+                    var data = await new Promise((resolve, reject) => {
+                          fs.readFile('mynewfile2cevap.txt', 'utf8', function (err, data) {
+                            if (err) {
+                              reject(err);
+                            }
+                            resolve(data);
+                          });
+                        });
+                    
+                    var hasString = await data.includes(eventObj.eventId)
+                    if(!hasString){
+                        const fulleventObj = await getEventDetail(eventObj);
+                        //console.log("fulleventObj", fulleventObj.eventId);
+
+                        eventsObjArr.push(fulleventObj);
+                        await writeFile('mynewfile2cevap.txt', `${fulleventObj.eventId} \n`, function (err) {
+
+                            if (err) throw err;
+                            console.log('Saved!');
+                        });      
+                        fulleventObj;
+                        //console.log(fulleventObj);
+                    }
+                      
+                    console.log("sıradaki::");
+
+
                 };
                 
                 //console.log(json.payload.results[0].events);
         
                 pagCursor =  json.payload.results[0].paginationCursor;
-                console.log("cursor::: ",json.payload.results[0].paginationCursor);
+                //console.log("cursor::: ",json.payload.results[0].paginationCursor);
             }catch(e) { 
-                if(e.message =="Cannot read property 'events' of undefined" ){
+                if(e.message.trim() =="Cannot read property 'events' of undefined" ){
+                    console.log(`${city} is finished` );
                     hasNextPage = false;
-                } else{
-                    console.log(e.message);
+                } 
+                else if(e.message.trim() == "Cannot read property 'paginationCursor' of undefined"){
+                    console.log(`${city} is finished` );
+                    hasNextPage = false;
                 }
-                console.log("loop bitti");  
-                hasNextPage = false;
+                
+                else if(e.message.includes("giriş yapılmalı")){
+                    console.log("deneme");
+                    console.log("::::::not:::: ",e.message);
+                }
+                else{
+                    console.log("::::::not:::: ",e);
+                    hasNextPage = false;
+                }
             };
-                 
         } // while loop closed
-
+        console.log("fetchEvents while loop finished"); 
+        console.log(eventsObjArr.eventId);
+        return eventsObjArr;
+        
     }
 
 
-    //get Event details from event page-----------------------
+
+
+    //*METHOD get Event details from event page-----------------------
     async function getEventDetail(eventObj){
+        console.log("making fetching;")
+
         const eventId =  Number(eventObj.eventId);
 
         const axios = require('axios')
         const cheerio = require('cheerio');
-
 
         var organizator = "";
         var mapPicUrl = "";
@@ -345,7 +444,6 @@ const fetch = require('node-fetch');
         var mekan = "";
         var address = "";
         var time = "";
-
 
         // Use the `get` method of axios with the URL of the ButterCMS documentation page as an argument
         //url: 'https://www.facebook.com/events/716080808735268'
@@ -361,39 +459,60 @@ const fetch = require('node-fetch');
             htmlData = htmlData.replace(/<!--/g,'')
             htmlData = htmlData.replace(/-->/g,'')
             //console.log(htmlData);
+
             let $ = cheerio.load(htmlData);
             
             console.log("lentght:::" , $("div._cqq").length);
             
-            //*if it shows login for continue 
+
+
+            //*event ulaşmak için giriş yapulması isteniyorsa
             if( $("div._cqq").length > 0 )  {
                 console.log("gggirdi");
-                $ = await new Promise(async (resolve,reject) => {
+                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3419.0 Safari/537.36');
+                
+                var htmlDataDiff = await page.goto(`https://facebook.com/events/${eventId}`).then(async (res) => {
                     //* bu olmadan Error: net::ERR_ABORTED at http://www.facebook.com/events/1699718656851757 hatası alıyordum  //kaynak https://github.com/puppeteer/puppeteer/issues/1477  //kaynak2 https://github.com/puppeteer/puppeteer/issues/2794   
-                    //await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3419.0 Safari/537.36');
+                    
                     //await page.setJavaScriptEnabled(false);
-
-                    await page.goto(`https://facebook.com/events/${eventId}`).then(async (res) => {
-
+                    //await page.evaluate(() => {  debugger;  });
                     await page.waitForSelector("._xkh");
-                    await page.waitFor(1500);
 
-                        //* disable JavaScript after the page has loaded,
-                        await page.evaluate(() => {
-                            debugger;
-                        });
-
-                        res.text().then((htmlText) => {
-                            console.log("gggirdi2");
-                            htmlText = htmlText.replace(/<!--/g,'')
-                            htmlText = htmlText.replace(/-->/g,'')
-                            resolve(cheerio.load(htmlText));
-                        })
-                    }).catch( (e) => {
-                        console.log("-e.e..e-----",e.message,"----");
-                        reject(false);
+                    //* disable JavaScript after the page has loaded,
+                    await res.text().then( async (htmlText) => {
+                        console.log("gggirdi2");
+                        htmlText = htmlText.replace(/<!--/g,'')
+                        htmlText = htmlText.replace(/-->/g,'')
+                        return htmlText;
                     });
-                }); 
+
+                }).catch( (e) => {
+                    if(e.message.includes("net::ERR_ABORTED") ){
+                        console.log("message:: ",e.message);
+                        const eventId = e.message.split('/').pop();
+                        console.log(eventId);
+                        var fs = require('fs');
+                        fs.appendFile('mynewfile1.txt ', ` ${eventId} \n` , function (err) {
+                            if (err) throw err;
+                            console.log('Saved!');
+                        });
+                        return;
+                    }
+                    else{
+                        console.log("-e.e..e-----",e.message,"----");
+                        return;
+                    }
+
+                });
+
+                //BEKLETME YAPILIYOR HTMLTEXTİN ÇEKİLDİĞİNDEN EMİN OLUNMAK İÇİN
+                if(htmlDataDiff){
+                    $ = cheerio.load(htmlDataDiff)
+                    //console.log("yüklendi", htmlDataDiff);
+                }else {
+                    console.log("BİR PEOBLEM VAR......................................");
+                }
+
             }
 
             $("._xkh").each( (index, element) => {
@@ -436,7 +555,7 @@ const fetch = require('node-fetch');
             //getting tel mail with selector
             let telAndEmail = $("div._4bl9._2qsg").find("span._c24").each( (index, element) => {
                 
-                if (index == 0){
+                if (index > 0){
                      other = $(element).text();
                     //console.log("other: ",other == "" ? "bunulanamdı" : other );
                 }
@@ -472,6 +591,8 @@ const fetch = require('node-fetch');
 
             eventObj["organizator"] = organizator;
             eventObj["mapPicUrl"] = mapPicUrl;
+            eventObj["latitude"] = parseFloat(latitude);
+            eventObj['Longitude'] = parseFloat(Longitude);
             eventObj["other"] = other;
             eventObj["telNo"] = telNo;
             eventObj["email"] = email;
@@ -491,6 +612,8 @@ const fetch = require('node-fetch');
 
 
  
+
+
 
     ///* puppeteer yapmadan direk fetch yöntemiyle çekmeyi başardığım ve daha hızlı olduğu için bu kısım iptal 
 

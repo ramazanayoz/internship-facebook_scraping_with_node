@@ -18,6 +18,7 @@ connection.connect( (err) => {
 });
 
 
+
 class MyDbService {
 
     //singeleten pattern
@@ -58,8 +59,116 @@ class MyDbService {
         }).catch((error) => { return error.message })
         console.log( await isSuccess)
         return;
+        
     }
+
+
+    //methods
+    async getAllPlaceId(){
+
+        const resultObj = await new Promise((resolve, reject) => {
+            const query = "SELECT * FROM places";
+            connection.query(query, (err, result) => {
+                if(err){
+                    
+                    reject(new Error(err.message));
+                }
+                else{
+                    resolve(result);;
+                }
+            })
+        }).catch((error) => { return error.message })
+
+        return resultObj;
+    }
+
+
+    
+   //methods
+    async insertNewEvent(eventObj){
+        const isSuccess = await new Promise((resolve, reject) => {
+            var eventId =  eventObj.eventId;
+            var eventTitle = eventObj.eventTitle;
+            var eventDay = eventObj.eventDay;
+			var eventDateAndTime = eventObj.eventDateAndTime;
+			var time = eventObj["time"];			
+            var eventLocation = eventObj.eventLocation;
+			var residence = eventObj["mekan"];
+            var fullAddress = eventObj["address"];
+			var mapPicUrl = eventObj["mapPicUrl"];
+            var latitude = eventObj["latitude"];
+            var longitude = eventObj['Longitude'];
+			var organizator = eventObj["organizator"];
+            var isFreeEvent = eventObj.isFreeEvent;
+            var isHappeningNowEvent = eventObj.isHappeningNowEvent;
+            var telNo = eventObj["telNo"];
+            var email = eventObj["email"];
+			var other = eventObj["other"];
+            var isOnlineEvent = eventObj.isOnlineEvent;
+			var olineEvent = eventObj["olineEvent"];
+            var eventBuyTicketUrl = eventObj.eventBuyTicketUrl;
+            var ticketTitle = eventObj["ticketTitle"];
+            var ticketDetail = eventObj["ticketDetail"];
+            var eventsocialContext = eventObj.eventsocialContext;
+            var eventDescription = eventObj.eventDescription;
+
+            //const query = "INSERT INTO places (id, searchedCity, title, latitude, longitude, dateAdded, country) VALUES (?,?,?,?,?,?,?);";
+
+            const query = 'INSERT INTO events (id, title, day, dateAndTime, time, location, residence, fullAddress, mapPicUrl, latitude, longitude, organizator, isFree, isHappeningNow, telNo, email, other, isOnlineEvent, olineEvent,buyTicketUrl,ticketTitle, ticketDetail, socialContext, description) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);';
+
+            connection.query(query,  [
+                mysql.escape(eventId),
+                mysql.escape(eventTitle), 
+                mysql.escape(eventDay),
+                mysql.escape( eventDateAndTime), 
+                mysql.escape(time),
+                mysql.escape(eventLocation), 
+                mysql.escape(residence),
+                mysql.escape(fullAddress), 
+                mysql.escape(mapPicUrl),
+                mysql.escape(latitude),
+                mysql.escape(longitude), 
+                mysql.escape(organizator),
+                mysql.escape(isFreeEvent),
+                mysql.escape(isHappeningNowEvent), 
+                mysql.escape(telNo),
+                mysql.escape(email),
+                mysql.escape(other),
+                mysql.escape(isOnlineEvent), 
+                mysql.escape(olineEvent),
+                mysql.escape(eventBuyTicketUrl),
+                mysql.escape(ticketTitle),
+                mysql.escape(ticketDetail), 
+                mysql.escape(eventsocialContext), 
+                mysql.escape(eventDescription)
+            ], (err, result) => {
+                if(err){
+                    if( err.code == "ER_DUP_ENTRY" ){
+                        reject(Error(err.message));
+                    }else{
+                        reject(Error(err));
+                    }
+                }
+                else{
+                    if(result.affectedRows == 1){
+                        resolve(true);
+                    }else{
+                        console.log("something is going wrong")
+                        resolve("something is going wrong");
+                    }
+                }
+            })
+        }).catch((error) => { return error.message })
+        console.log( await isSuccess);
+        console.log("successfully write to db: ", eventObj.eventId);
+        return;
+    }
+
 }
+
+
+//const db = MyDbService.getDbServiceInstance();
+//db.getAllPlaceId(); 
 
 
 module.exports = MyDbService;
