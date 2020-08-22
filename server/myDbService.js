@@ -26,6 +26,8 @@ class MyDbService {
         return instance ? instance : new MyDbService();
     }
 
+
+
     //methods
     async addNewPlace(cityJsonObj){
 
@@ -83,11 +85,30 @@ class MyDbService {
     }
 
 
+    async deleteAllPlacesFromDB(){
+        const response = await new Promise((resolve, reject) => {
+            const query = "DELETE FROM places";
+            connection.query(query, (err, result) => {
+                if(err){
+                    reject(new Error(err.message));
+                }
+                else{
+                    console.log(result);
+                    if(result.affectedRows > 0) resolve(true);
+                    else resolve(false);
+                }
+            })
+        }).catch((error) => { return error.message });
+        console.log("is deleted all places : ", response);
+        return response;
+    }
+
     
    //methods
     async insertNewEvent(eventObj){
         const isSuccess = await new Promise((resolve, reject) => {
             var eventId =  eventObj.eventId;
+            var cityId = eventObj.cityId;
             var eventTitle = eventObj.eventTitle;
             var eventDay = eventObj.eventDay;
 			var eventDateAndTime = eventObj.eventDateAndTime;
@@ -114,10 +135,11 @@ class MyDbService {
 
             //const query = "INSERT INTO places (id, searchedCity, title, latitude, longitude, dateAdded, country) VALUES (?,?,?,?,?,?,?);";
 
-            const query = 'INSERT INTO events (id, title, day, dateAndTime, time, location, residence, fullAddress, mapPicUrl, latitude, longitude, organizator, isFree, isHappeningNow, telNo, email, other, isOnlineEvent, olineEvent,buyTicketUrl,ticketTitle, ticketDetail, socialContext, description) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);';
+            const query = 'INSERT INTO events (id, cityId, title, day, dateAndTime, time, location, residence, fullAddress, mapPicUrl, latitude, longitude, organizator, isFree, isHappeningNow, telNo, email, other, isOnlineEvent, olineEvent,buyTicketUrl,ticketTitle, ticketDetail, socialContext, description) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);';
 
             connection.query(query,  [
                 mysql.escape(eventId),
+                mysql.escape(cityId),
                 mysql.escape(eventTitle), 
                 mysql.escape(eventDay),
                 mysql.escape( eventDateAndTime), 
@@ -144,7 +166,7 @@ class MyDbService {
             ], (err, result) => {
                 if(err){
                     if( err.code == "ER_DUP_ENTRY" ){
-                        reject(Error(err.message));
+                        reject(Error("DUP_ENTRYFOR_", eventId));
                     }else{
                         reject(Error(err));
                     }
@@ -164,11 +186,46 @@ class MyDbService {
         return;
     }
 
+
+    async checkEventExist(eventId){
+        const isExist = await new Promise( (resolve, reject) => {
+            const query = "SELECT * FROM events WHERE id = ?;";
+            connection.query(query, [eventId], (err, result) => {
+                if(err)
+                    reject(new Error(err.message));
+                else{
+                    //console.log(result.length);
+                    if(result.length > 0) resolve(true);
+                    else resolve(false);
+                    
+                }
+            });
+        });
+
+        return  isExist;
+    }
+
+    async checkExistPlaceIdsOnEvent(placeId){
+        const isExist = await new Promise( (resolve, reject) => {
+            const query = "SELECT * FROM events Where cityId = ?;";
+            connection.query(query, [placeId], (err, result) => {
+                if(err)
+                    reject(new Error(err.message));
+                else{
+                    if(result.length > 0) resolve(true);
+                    else resolve(false);
+                }
+            });
+        });
+        console.log(isExist);
+        return isExist
+    }
+
 }
 
 
 //const db = MyDbService.getDbServiceInstance();
 //db.getAllPlaceId(); 
-
+//db.checkEventExist(3073616140408911);
 
 module.exports = MyDbService;
