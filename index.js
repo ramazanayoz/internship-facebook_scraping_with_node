@@ -14,10 +14,10 @@ var cookie = "";
 //users
 var inWhichUser = 0;
 var faceUserArr=[];
-//faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});  
-//faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
-faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});  
-faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});  
+//faceUserArr.push({email: "eayozr2@gmail.com", password: "aa123456"});  
+//faceUserArr.push({email: "eayozr5@gmail.com", password: "aa123456"});
+faceUserArr.push({email: "eayoz333@gmail.com", password: "r789456123"});  
+//faceUserArr.push({email: "eayozr2@gmail.com", password: "rr123456"});    
 
 ( async () => {
     
@@ -31,13 +31,15 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
     let isLoginError = await loginToFacebook();
 
     if(isLoginError == false){
-        await eventOperations();
+        await page.waitForSelector("div#contentArea").then(  async () => {
+            await eventOperations();
+        });
         
     }
     else{
         console.log("login gerçekleşmedi, isLoginError::",isLoginError);
     }
-    /*** */
+    //***** */
     //await browser.close();
 
 
@@ -73,7 +75,7 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
         await page.setViewport({ width: 1920, height: 1080 });
     
         //blocking images and CSS for speed up
-     
+     /*
         await page.setRequestInterception(true);
 
         page.on('request', (req) => {
@@ -84,7 +86,7 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
                 req.continue();
             }
         });
-        
+        */
         //---------------
 
         //await page.setUserAgent('Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:79.0) Gecko/20100101 Firefox/79.0');
@@ -120,50 +122,56 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
     
     //LOGİN FUNC -----------------
     async function login1() {
-        await page.waitFor("input");
-        await page.click("input[type=\"email\"]")
-        await page.keyboard.type(faceUserArr[inWhichUser].email);
-    
-        await page.waitFor("input");
-        await page.click("input[type=\"password\"]")
-        await page.keyboard.type(faceUserArr[inWhichUser].password);
-
-        await page.waitFor("input");
-        await page.click("input[type=\"submit\"]");
+        
+            await page.waitFor("input");
+            await page.click("input[type=\"email\"]")
+            await page.keyboard.type(faceUserArr[inWhichUser].email);
+        
+            await page.waitFor("input");
+            await page.click("input[type=\"password\"]")
+            await page.keyboard.type(faceUserArr[inWhichUser].password);
+        
+            await page.waitFor("input");
+            await page.click("input[type=\"submit\"]");
+        
     }//--------------------------
 
 
 
     //login1 olmadıysa login2 --------------
     async function login2() { 
-        console.log("login2 ile giriş yapılıyor")
-        await page.waitFor("input[type=\"text\"]");
-        await page.click("input[type=\"text\"]")
-        await page.keyboard.type(faceUserArr[inWhichUser].email);
-    
-        await page.waitFor("input[type=\"password\"]");
-        await page.click("input[type=\"password\"]")
-        await page.keyboard.type(faceUserArr[inWhichUser].password);
-    
-        await page.waitFor("button[type=\"submit\"]");
-        await page.click("button[type=\"submit\"]");
-        let loginError = false;
+        const isError = await new Promise(async (resolve, reject) => {
+            console.log("login2 ile giriş yapılıyor")
+            await page.waitFor("input[type=\"text\"]");
+            await page.click("input[type=\"text\"]")
+            await page.keyboard.type(faceUserArr[inWhichUser].email);
+        
+            await page.waitFor("input[type=\"password\"]");
+            await page.click("input[type=\"password\"]")
+            await page.keyboard.type(faceUserArr[inWhichUser].password);
+        
+            try{
+                await page.waitFor("button[type=\"submit\"]");
+                await page.click("button[type=\"submit\"]");
+            }catch(e){
 
-        return await page.waitForSelector("div#content_container", {timeout: 15000}).then( () => {
-           console.log("login2 başarılı"); 
-           return loginError = false;
-        }).catch((e) => {
-            console.log("bir problem oluştu");
-            page.waitForSelector("form[ajaxify=\"/checkpoint/async?next\"]", {timeout: 3000}).then(() => {
-                console.log("güvenlik sorunu çözülüyor"); 
-                solveSecurityProblem(); 
-            }).catch((e) => {
-                console.log("solveSecurityProblem'de problem oluştu")
-                return loginError = true;
-            })
+            }
+
+            await page.waitForSelector("div#content_container", {timeout: 15000}).then( () => {
+            console.log("login2 başarılı"); 
+            resolve(false);
+            }).catch( async (e) => {
+                console.log("bir problem oluştu");
+                loginError =  await page.waitForSelector("form[ajaxify=\"/checkpoint/async?next\"]", {timeout: 3000}).then(async() => {
+                    console.log("güvenlik sorunu çözülüyor"); 
+                    resolve(await solveSecurityProblem()); 
+                }).catch((e) => {
+                    console.log("solveSecurityProblem'de problem oluştu")
+                    resolve(true)
+                })
+            });
         });
-
-        return loginError = true;
+        return isError;
 
     }//-------------------------
 
@@ -173,72 +181,85 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
 
     //login ile giriş yapılmadıysa doğrulama isteniyor--------------------
     async function solveSecurityProblem(){ 
-        
-        await page.waitFor("form[ajaxify=\"/checkpoint/async?next\"]")
-        await page.waitFor("button#checkpointSubmitButton");
-        await page.click("button#checkpointSubmitButton");
+        const isError = await new Promise(async (resolve, reject) => {
+            try{
+                await page.waitFor("form[ajaxify=\"/checkpoint/async?next\"]")
+                await page.waitFor("button#checkpointSubmitButton");
+                await page.click("button#checkpointSubmitButton");
 
-        //doğrulama 2.adım
-        await page.waitFor("input[name=\"verification_method\"]")
-        await page.evaluate(() => {
-            element =  document.querySelector("input[name=\"verification_method\"]");
-            console.log(element);
-            element.click();
-            document.querySelector("button[type=\"submit\"]").click();
+                //doğrulama 2.adım
+                await page.waitFor("input[name=\"verification_method\"]")
+                await page.evaluate(() => {
+                    element =  document.querySelector("input[name=\"verification_method\"]");
+                    console.log(element);
+                    element.click();
+                    document.querySelector("button[type=\"submit\"]").click();
+                });
+                
+
+                //google giriş için yeni sekme açılıyor ona geçiş yapıyoruz
+                const nav = new Promise(res => browser.on('targetcreated', res))
+                await page.waitFor("button[value=\"1\"]");
+                await page.click("button[value=\"1\"]")
+                await nav
+                const pages = await browser.pages();
+                console.log(pages.length);//number of pages increases !
+                console.log(pages.map(page => page.url()));
+                const popup = pages[pages.length-1]
+
+                //google login işlemleri
+                signInGoogle(popup);
+                console.log("solveSecurtiy başarılı");
+                resolve(false);
+            } catch(e){
+                console.log("solve security bir hata oluştu");
+                await signOutForCookies();
+                waitFor
+                resolve(true);
+            }
         });
-        
-
-        //google giriş için yeni sekme açılıyor ona geçiş yapıyoruz
-        const nav = new Promise(res => browser.on('targetcreated', res))
-        await page.waitFor("button[value=\"1\"]");
-        await page.click("button[value=\"1\"]")
-        await nav
-        const pages = await browser.pages();
-        console.log(pages.length);//number of pages increases !
-        console.log(pages.map(page => page.url()));
-        const popup = pages[pages.length-1]
-
-        //google login işlemleri
-        signInGoogle(popup);
-
-
+        return isError;
     }//---------------------------------
 
     //doğrulama yaparken gerekli sadece-------------------------
-    async function signInGoogle(){ 
-        await popup.setViewport({ width: 1500, height: 764 });
+    async function signInGoogle(popup){
+        const isSuccessfull = await new Promise( async (resolve, reject) => {
+            try {
+                await popup.setViewport({ width: 1500, height: 764 });
 
-        try {
-            await popup.waitFor(1000);
-            //first write email
-            await popup.waitFor("input[type=\"email\"]", {visible:true})
-            await popup.click("input[type=\"email\"]", {visible:true})
-            await popup.keyboard.type("eayoz333@gmail.com");
-            await popup.waitFor("div.VfPpkd-dgl2Hf-ppHlrf-sM5MNb > button", {visible:true});
-            await popup.click("div.VfPpkd-dgl2Hf-ppHlrf-sM5MNb > button", {visible:true}).catch((e) => console.log(""));
-    
+                await popup.waitFor(1000);
+                //first write email
+                await popup.waitFor("input[type=\"email\"]", {visible:true})
+                await popup.click("input[type=\"email\"]", {visible:true})
+                await popup.keyboard.type("eayoz333@gmail.com");
+                await popup.waitFor("div.VfPpkd-dgl2Hf-ppHlrf-sM5MNb > button", {visible:true});
+                await popup.click("div.VfPpkd-dgl2Hf-ppHlrf-sM5MNb > button", {visible:true}).catch((e) => console.log(""));
+        
 
 
-            //then email
+                //then email
 
-            await popup.waitFor("input[type=\"password\"]", {visible:true})
-            await popup.click("input[type=\"password\"]", {visible:true})
-            await popup.keyboard.type("rr294294294");    
-            await popup.waitFor("div.VfPpkd-dgl2Hf-ppHlrf-sM5MNb > button", {visible:true})
-            await popup.click("div.VfPpkd-dgl2Hf-ppHlrf-sM5MNb > button").catch((e) => console.log(""));
-            await page.waitFor(2000);
+                await popup.waitFor("input[type=\"password\"]", {visible:true})
+                await popup.click("input[type=\"password\"]", {visible:true})
+                await popup.keyboard.type("rr294294294");    
+                await popup.waitFor("div.VfPpkd-dgl2Hf-ppHlrf-sM5MNb > button", {visible:true})
+                await popup.click("div.VfPpkd-dgl2Hf-ppHlrf-sM5MNb > button").catch((e) => console.log(""));
 
-            await page.evaluate(`window.confirm = () => true`)
-            await page.waitFor("div.dialog_buttons >  div > label > input", {visible:true});
-            console.log("beklendi");
-            await page.click("div.dialog_buttons >  div > label > input");
-
-            await page.waitFor("#button#checkpointSubmitButton", {visible:true})
-            await page.click("button#checkpointSubmitButton");
-
-        } catch(e) {
-            console.log("error", e);
-        }
+                await page.evaluate(`window.confirm = () => true`)
+                await page.waitFor("div.dialog_buttons >  div > label > input", {visible:true});
+                console.log("beklendi");
+                await page.click("div.dialog_buttons >  div > label > input");
+                console.log("beklendi");
+                await page.waitFor(2000);
+                await page.waitFor("button#checkpointSubmitButton", {visible:true})
+                await page.click("button#checkpointSubmitButton");
+                console.log("bitti");
+                resolve(true);
+            } catch(e) {
+                console.log("error", e);
+            }
+        });
+        return isSuccessfull;
     }//--------------------
 
 
@@ -631,6 +652,7 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
     
     //event getting from url-------------------
     async function getPostData(){
+            console.log("getting new postData");
             page.goto('https://www.facebook.com/events/discovery/?suggestion_token={"city":"106012156106461"}&acontext={"ref":2,"ref_dashboard_filter":"upcoming","source":2,"source_dashboard_filter":"discovery","action_history":"[{\"surface\":\"dashboard\",\"mechanism\":\"main_list\",\"extra_data\":{\"dashboard_filter\":\"upcoming\"}},{\"surface\":\"discover_filter_list\",\"mechanism\":\"surface\",\"extra_data\":{\"dashboard_filter\":\"discovery\"}}]","has_source":true}');
             const postData  =  await new Promise( async (resolve, reject) => {
                 return await page.on('request', async (request) => {     //sürekli dinleme yapılır
@@ -649,6 +671,7 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
 
 
     async function getCookie(){
+        console.log("getting new cookie")
         const gettingCookie = await new Promise( async (resolve,reject) => {
             var cookiesArr = await page.cookies();
             
@@ -692,7 +715,8 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
                 },
                 data: postData,
             }).then( (res) => res.data)
-
+        
+        try{
             htmlText = await  htmlText.substring(9);
             json = await JSON.parse(htmlText);
 
@@ -704,6 +728,12 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
                 console.log("test connection başarısız");
                 resolve(false);
             }
+        } catch(e){
+            console.log(e);
+            resolve(false);
+        }
+
+
         });
         return isSuccessfull;
 
@@ -720,15 +750,20 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
                 inWhichUser++;
             }
 
+        try{
 
+            
             await page.waitForSelector("div._5lxr");
             await page.click("div._5lxr");
             console.log("navigasyon açılıdı")
             await page.waitForSelector("ul._54nf > li:last-child");
             await page.click("ul._54nf > li:last-child");
-
-            //await browser.close();
-            //page = await initPuppeteer();
+            
+        }catch(e){
+            await browser.close();
+            page = await initPuppeteer();
+        }
+ 
 
             let isLoginError = await loginToFacebook();
     
@@ -737,6 +772,7 @@ faceUserArr.push({email: "xxxx@gmail.com", password: "xxxx"});
             }
             else{
                 console.log("login gerçekleşmedi, isLoginError::",isLoginError);
+                resolve(false);
             }
         });
         return isSuccessfull;
