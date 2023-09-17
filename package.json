@@ -1,26 +1,42 @@
 {
-  "name": "Real_Project_facebook_event_scrapping",
+  "name": "real_project_facebook_event_scrapping",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node --esm index2.ts"
   },
+  "type": "commonjs",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "^1.5.0",
     "cheerio": "^1.0.0-rc.3",
+    "chromium": "^3.0.3",
     "dotenv": "^8.2.0",
     "mysql": "^2.18.1",
     "node-fetch": "^2.6.0",
-    "puppeteer": "^5.2.1",
+    "puppeteer": "^21.1.1",
+    "puppeteer-core": "^21.1.1",
     "request": "^2.88.2",
+    "ts-node": "^10.9.1",
+    "xmldom": "^0.6.0",
     "xpath": "0.0.27",
-    "xpath-html": "^1.0.2"
+    "xpath-html": "^1.0.3"
   },
   "devDependencies": {
-    "nodemon": "^2.0.4"
+    "nodemon": "^2.0.4",
+    "tsconfig.json": "^1.0.11",
+    "typescript": "^5.2.2"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ramazanayoz/internship-facebook_scraping_with_node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ramazanayoz/internship-facebook_scraping_with_node/issues"
+  },
+  "homepage": "https://github.com/ramazanayoz/internship-facebook_scraping_with_node#readme",
   "description": ""
 }
